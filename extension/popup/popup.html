@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>广告拦截助手</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+    <div class="popup-container">
+        <!-- 头部 -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <h1>广告拦截助手</h1>
+            </div>
+        </header>
+
+        <!-- 当前页面状态 -->
+        <section class="current-page card">
+            <div class="card-header">
+                <span class="label">当前网站</span>
+                <span id="statusBadge" class="badge badge-active">运行中</span>
+            </div>
+            <div id="hostname" class="hostname">—</div>
+            <div class="stats-row">
+                <div class="stat">
+                    <span id="removedCount" class="stat-value">0</span>
+                    <span class="stat-label">本次移除</span>
+                </div>
+                <div class="stat">
+                    <span id="cachedCount" class="stat-value">0</span>
+                    <span class="stat-label">缓存命中</span>
+                </div>
+                <div class="stat">
+                    <span id="totalBlocked" class="stat-value">0</span>
+                    <span class="stat-label">历史累计</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 操作按钮 -->
+        <section class="actions">
+            <button id="btnRescan" class="btn btn-primary">
+                🔄 重新扫描
+            </button>
+            <button id="btnToggleDomain" class="btn btn-secondary">
+                ⏸️ 暂停此网站
+            </button>
+        </section>
+
+        <!-- 已缓存的黑名单 -->
+        <section class="blacklist card">
+            <div class="card-header">
+                <span class="label">📋 黑名单缓存</span>
+                <button id="btnClearDomain" class="btn-text" title="清空此网站缓存">清空</button>
+            </div>
+            <div id="blacklistContent" class="blacklist-content">
+                <p class="empty-hint">暂无缓存数据，浏览网页后自动积累</p>
+            </div>
+        </section>
+
+        <!-- 全部域名统计 -->
+        <section class="all-stats card">
+            <div class="card-header">
+                <span class="label">📊 全部拦截统计</span>
+                <button id="btnClearAll" class="btn-text btn-danger" title="清空所有缓存">全部清空</button>
+            </div>
+            <div id="allStatsContent" class="stats-list">
+                <p class="empty-hint">暂无统计数据</p>
+            </div>
+        </section>
+
+        <!-- 底部 -->
+        <footer class="footer">
+            <span class="version">v1.0.0</span>
+        </footer>
+    </div>
+
+    <script src="../storage.js"></script>
+    <script src="popup.js"></script>
+</body>
+
+</html>
