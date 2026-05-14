@@ -86,6 +86,22 @@ const RulesEngine = {
     { selector: '[class*="-adv-"]', type: 'ad-class-link', priority: 75 },
     { selector: '[class*="_adv"]', type: 'ad-class-link', priority: 75 },
     { selector: '[class*="_adv_"]', type: 'ad-class-link', priority: 75 },
+    // ===== 站内中转跳转标识（jump_to / redirect / goto 等） =====
+    { selector: '[class*="jump_to"]', type: 'ad-class-link', priority: 70 },
+    { selector: '[class*="jump-to"]', type: 'ad-class-link', priority: 70 },
+    { selector: '[class*="redirect"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="go_to"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="go-to"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="goto"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="track_link"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="track-link"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="click_track"]', type: 'ad-class-link', priority: 65 },
+    // ===== 追踪型 data 属性（data-jump / data-redirect 等） =====
+    { selector: '[data-jump]', type: 'data-link', priority: 75 },
+    { selector: '[data-redirect]', type: 'data-link', priority: 75 },
+    { selector: '[data-goto]', type: 'data-link', priority: 70 },
+    { selector: '[data-track]', type: 'data-link', priority: 65 },
+    { selector: '[data-click]', type: 'data-link', priority: 60 },
     // ===== 弹窗/浮层广告 =====
     { selector: '[class*="popup"]', type: 'class', priority: 40 },
     { selector: '[class*="modal-ad"]', type: 'class', priority: 80 },
@@ -151,6 +167,9 @@ const RulesEngine = {
             continue;
           // 对于 adv/ad class 规则，验证元素内部是否包含外部链接
           if (rule.type === 'ad-class-link' && !this.containsExternalLink(el))
+            continue;
+          // 对于 data-link 规则，验证 data 属性值是否指向外部
+          if (rule.type === 'data-link' && !this.hasExternalDataLink(el))
             continue;
           // 对于 class/id 类规则，验证是否在广告容器中
           if (
@@ -524,6 +543,44 @@ const RulesEngine = {
       return true;
     }
 
+    return false;
+  },
+
+  /**
+   * 检查元素的 data-* 属性是否包含外部链接
+   * 用于 data-jump / data-redirect 等追踪属性
+   */
+  hasExternalDataLink(el) {
+    const origin = this._siteOrigin || window.location.origin.toLowerCase();
+    const attrs = el.attributes;
+    for (const attr of attrs) {
+      if (!attr.name.startsWith('data-')) continue;
+      const value = attr.value || '';
+      // 检查属性值中是否包含外部 URL
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        try {
+          const url = new URL(value);
+          if (url.origin.toLowerCase() !== origin) return true;
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    }
+    // 也检查 onclick 属性
+    const onclick = el.getAttribute('onclick') || '';
+    if (onclick) {
+      const urlMatch = onclick.match(/https?:\/\/[^\s"')]+/g);
+      if (urlMatch) {
+        for (const u of urlMatch) {
+          try {
+            const url = new URL(u);
+            if (url.origin.toLowerCase() !== origin) return true;
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      }
+    }
     return false;
   },
 
