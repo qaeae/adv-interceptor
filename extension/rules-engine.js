@@ -102,11 +102,14 @@ const RulesEngine = {
     { selector: '[data-goto]', type: 'data-link', priority: 70 },
     { selector: '[data-track]', type: 'data-link', priority: 65 },
     { selector: '[data-click]', type: 'data-link', priority: 60 },
-    // ===== 弹窗/浮层广告 =====
-    { selector: '[class*="popup"]', type: 'class', priority: 40 },
-    { selector: '[class*="modal-ad"]', type: 'class', priority: 80 },
-    { selector: '[class*="overlay-ad"]', type: 'class', priority: 80 },
-    { selector: '[class*="floating-ad"]', type: 'class', priority: 80 },
+    // ===== 弹窗/浮层广告（有外部/中转链接才判定为广告） =====
+    { selector: '[class*="popup"]', type: 'ad-class-link', priority: 65 },
+    { selector: '[class*="modal-ad"]', type: 'ad-class-link', priority: 75 },
+    { selector: '[class*="overlay-ad"]', type: 'ad-class-link', priority: 75 },
+    { selector: '[class*="floating-ad"]', type: 'ad-class-link', priority: 75 },
+    { selector: '[class*="modal"]', type: 'ad-class-link', priority: 50 },
+    { selector: '[class*="overlay"]', type: 'ad-class-link', priority: 50 },
+    { selector: '[class*="dialog"]', type: 'ad-class-link', priority: 45 },
     // ===== 广告脚本（JuicyAds / 内联广告脚本等） =====
     { selector: 'script[data-cfasync]', type: 'data', priority: 90 },
     { selector: 'script[src*="juicyads"]', type: 'data', priority: 95 },
