@@ -228,6 +228,10 @@ const RulesEngine = {
       if (style.position !== 'absolute' && style.position !== 'fixed') continue;
       if (style.display === 'none' || style.visibility === 'hidden') continue;
 
+      // 只处理广告尺寸的图片（≥100px 宽），跳过小图标/封面缩略图
+      const rect = img.getBoundingClientRect();
+      if (rect.width < 100 && rect.height < 100) continue;
+
       // 检查图片自身或其父级是否有外部/中转链接
       const link = img.closest('a[href]');
       if (link) {
@@ -730,12 +734,16 @@ const RulesEngine = {
       }
     }
 
-    // 策略3: 构建唯一路径（向上最多追溯4层）
+    // 策略3: 稳定属性选择器（优先于 DOM 路径，跨页面加载更可靠）
+    const attrSel = this._buildAttrSelector(el);
+    if (attrSel && attrSel !== el.tagName.toLowerCase()) return attrSel;
+
+    // 策略4: 构建唯一路径（向上最多追溯4层）
     const path = this._buildUniquePath(el, 4);
     if (path) return path;
 
-    // 策略4: 回退 — 使用 tag + 属性
-    return this._buildAttrSelector(el);
+    // 策略5: 回退
+    return el.tagName.toLowerCase();
   },
 
   /**
@@ -827,9 +835,46 @@ const RulesEngine = {
     const tag = el.tagName.toLowerCase();
     const attrs = [];
 
+    // 广告相关 data 属性
     if (el.getAttribute('data-ad')) attrs.push('[data-ad]');
     if (el.getAttribute('data-ad-client'))
       attrs.push(`[data-ad-client="${el.getAttribute('data-ad-client')}"]`);
+    if (el.getAttribute('data-ad-slot')) attrs.push('[data-ad-slot]');
+    if (el.getAttribute('data-ts-spot')) attrs.push('[data-ts-spot]');
+    if (el.getAttribute('data-ts-subid')) attrs.push('[data-ts-subid]');
+    if (el.getAttribute('data-cfasync')) attrs.push('[data-cfasync]');
+    if (el.getAttribute('data-jump')) attrs.push('[data-jump]');
+    if (el.getAttribute('data-redirect')) attrs.push('[data-redirect]');
+
+    // src 属性 → 提取域名关键词作为稳定选择器
+    const src = el.getAttribute('src') || '';
+    if (
+      src &&
+      !src.startsWith('data:') &&
+      !src.startsWith('/') &&
+      !src.startsWith('.')
+    ) {
+      const adDomains = [
+        'doubleclick',
+        'googlesyndication',
+        'juicyads',
+        'tsyndicate',
+        'adsrvr',
+        'adnxs',
+        'criteo',
+        'outbrain',
+        'revcontent',
+        'popads',
+      ];
+      for (const domain of adDomains) {
+        if (src.includes(domain)) {
+          attrs.push(`[src*="${domain}"]`);
+          break;
+        }
+      }
+    }
+
+    // aria-label
     if (el.getAttribute('aria-label')) {
       const label = el.getAttribute('aria-label').substring(0, 20);
       attrs.push(`[aria-label*="${CSS.escape(label)}"]`);
@@ -839,7 +884,7 @@ const RulesEngine = {
       return tag + attrs.join('');
     }
 
-    // 最后回退
+    // 回退：有意义 class
     const cls = this._getMeaningfulClasses(el);
     if (cls.length > 0) {
       return tag + '.' + cls.map((c) => CSS.escape(c)).join('.');

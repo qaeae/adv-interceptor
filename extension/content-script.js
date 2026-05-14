@@ -97,7 +97,6 @@
         cls.includes('ad-') ||
         cls.includes('_ad') ||
         cls.includes('advert') ||
-        cls.includes('adv') ||
         cls.includes('sponsor') ||
         cls.includes('promo') ||
         cls.includes('banner') ||
@@ -105,7 +104,6 @@
         cls.includes('advertising') ||
         id.includes('ad-') ||
         id.includes('_ad') ||
-        id.includes('adv') ||
         id.includes('google_ads') ||
         id.includes('taboola');
 
@@ -534,7 +532,6 @@
         containerCls.includes('ad-') ||
         containerCls.includes('_ad') ||
         containerCls.includes('advert') ||
-        containerCls.includes('adv') ||
         containerCls.includes('sponsor') ||
         containerCls.includes('promo') ||
         containerCls.includes('banner') ||
@@ -542,7 +539,6 @@
         containerCls.includes('advertising') ||
         containerId.includes('ad-') ||
         containerId.includes('_ad') ||
-        containerId.includes('adv') ||
         containerId.includes('google_ads') ||
         containerId.includes('taboola');
 
@@ -846,15 +842,12 @@
 
       console.log(`[广告拦截助手] 路由变化 (${source}): ${currentUrl}`);
 
-      // 等待新内容渲染后扫描（给SPA框架一点时间）
-      setTimeout(() => {
-        scanAndRemove();
-      }, 500);
-
-      // 再等更长时间做二次扫描（有些广告加载较慢）
-      setTimeout(() => {
-        scanAndRemove();
-      }, 2000);
+      // 等待新内容渲染后扫描
+      setTimeout(() => scanAndRemove(), 500);
+      // 第三方脚本可能延迟加载
+      setTimeout(() => scanAndRemove(), 2000);
+      // 兜底扫描（如 tsyndicate 等慢速广告脚本）
+      setTimeout(() => scanAndRemove(), 5000);
     }
 
     /**
