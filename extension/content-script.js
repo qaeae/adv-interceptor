@@ -748,13 +748,28 @@
      * 监听 DOM 变化（处理延迟加载的广告）
      */
     function observeDOM() {
+      let hasNewScript = false;
+
       const observer = new MutationObserver((mutations) => {
-        // 只关注新增节点
         let hasNewNodes = false;
         for (const mutation of mutations) {
           if (mutation.addedNodes.length > 0) {
             hasNewNodes = true;
-            break;
+            // 检测是否有新 <script> 注入（第三方广告脚本）
+            for (const node of mutation.addedNodes) {
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                if (node.tagName === 'SCRIPT' || node.querySelector('script')) {
+                  hasNewScript = true;
+                }
+              }
+            }
+          }
+          // 属性变化：src/href 被脚本修改（如广告图片延迟加载）
+          if (mutation.type === 'attributes') {
+            const attr = mutation.attributeName;
+            if (attr === 'src' || attr === 'href' || attr === 'style') {
+              hasNewNodes = true;
+            }
           }
         }
         if (hasNewNodes) {
@@ -762,15 +777,23 @@
         }
       });
 
-      // 等 body 出现后再开始监听
       const startObserving = () => {
         if (document.body) {
           observer.observe(document.body, {
             childList: true,
             subtree: true,
+            attributes: true,
+            attributeFilter: ['src', 'href', 'style'],
           });
           // 初始扫描
           scanAndRemove();
+          // 延迟兜底扫描：覆盖第三方脚本异步注入
+          setTimeout(() => {
+            if (hasNewScript)
+              console.log('[广告拦截助手] 检测到广告脚本注入，执行延迟扫描');
+            scanAndRemove();
+          }, 2000);
+          setTimeout(() => scanAndRemove(), 5000);
         } else {
           requestAnimationFrame(startObserving);
         }
