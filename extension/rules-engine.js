@@ -107,11 +107,23 @@ const RulesEngine = {
     { selector: '[class*="modal"]', type: 'ad-class-link', priority: 50 },
     { selector: '[class*="overlay"]', type: 'ad-class-link', priority: 50 },
     { selector: '[class*="dialog"]', type: 'ad-class-link', priority: 45 },
-    // ===== 广告脚本（JuicyAds / 内联广告脚本等） =====
+    // ===== 广告脚本（JuicyAds / tsyndicate / 内联广告脚本等） =====
     { selector: 'script[data-cfasync]', type: 'data', priority: 90 },
     { selector: 'script[src*="juicyads"]', type: 'data', priority: 95 },
+    { selector: 'script[src*="tsyndicate"]', type: 'data', priority: 95 },
+    { selector: 'script[src*="adsrvr"]', type: 'data', priority: 90 },
+    { selector: 'script[src*="adnxs"]', type: 'data', priority: 90 },
+    { selector: 'script[src*="criteo"]', type: 'data', priority: 90 },
+    { selector: 'script[src*="outbrain"]', type: 'data', priority: 90 },
+    { selector: 'script[src*="revcontent"]', type: 'data', priority: 90 },
+    { selector: 'script[src*="popads"]', type: 'data', priority: 90 },
     { selector: 'script[src*="ad."]', type: 'data', priority: 85 },
     { selector: 'script[src*="/ad/"]', type: 'data', priority: 80 },
+    // ===== 广告平台 data 属性 =====
+    { selector: '[data-ts-spot]', type: 'data', priority: 95 },
+    { selector: '[data-ts-subid]', type: 'data', priority: 95 },
+    { selector: '[data-ts-processed]', type: 'data', priority: 90 },
+    { selector: '[data-ad-slot]', type: 'data', priority: 100 },
     // ===== 可点击元素 → 站外跳转 = 广告（仅检测 <a> 内的 img/文字） =====
     { selector: 'a[href] img', type: 'clickable-external', priority: 75 },
     { selector: 'a[href] span', type: 'clickable-external', priority: 60 },

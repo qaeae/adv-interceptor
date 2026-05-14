@@ -546,14 +546,21 @@
         containerId.includes('google_ads') ||
         containerId.includes('taboola');
 
-      // 有 id → 可能被 CSS/JS 引用，不是纯容器（除非 id 本身就是广告标识）
-      if (container.id && container.id.trim() && !isAdRelated) return false;
+      // 有 id → 可能被 CSS/JS 引用（除非 id 是广告标识，或子元素是广告元素）
+      const childIsAd =
+        excludeChild.tagName === 'SCRIPT' ||
+        excludeChild.tagName === 'IFRAME' ||
+        excludeChild.hasAttribute('data-cfasync') ||
+        excludeChild.hasAttribute('data-ts-spot');
+      if (container.id && container.id.trim() && !isAdRelated && !childIsAd)
+        return false;
 
-      // 有 role 属性 → 有语义意义（广告容器除外）
-      if (container.hasAttribute('role') && !isAdRelated) return false;
+      // 有 role 属性 → 有语义意义（广告容器或广告子元素除外）
+      if (container.hasAttribute('role') && !isAdRelated && !childIsAd)
+        return false;
 
-      // 有 aria-* 属性 → 无障碍语义（广告容器除外）
-      if (!isAdRelated) {
+      // 有 aria-* 属性 → 无障碍语义（同上）
+      if (!isAdRelated && !childIsAd) {
         const attrs = container.attributes;
         for (const attr of attrs) {
           if (attr.name.startsWith('aria-')) return false;
@@ -574,11 +581,12 @@
         // 元素节点
         if (child.nodeType === Node.ELEMENT_NODE) {
           const childTag = child.tagName;
-          // 不可见/无布局影响元素 → 忽略
+          // 不可见/无布局影响元素 → 忽略；广告子元素旁的 iframe 也忽略
           if (
             childTag === 'BR' ||
             childTag === 'SCRIPT' ||
-            childTag === 'STYLE'
+            childTag === 'STYLE' ||
+            (childTag === 'IFRAME' && childIsAd)
           )
             continue;
           // 如果还有其他有意义的元素子节点 → 容器有实际内容
