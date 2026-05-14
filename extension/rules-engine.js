@@ -153,6 +153,11 @@ const RulesEngine = {
     for (const rule of this.GENERIC_RULES) {
       try {
         const elements = document.querySelectorAll(rule.selector);
+        if (elements.length > 0) {
+          console.log(
+            `[诊断] 规则 ${rule.selector} (type=${rule.type}) 匹配 ${elements.length} 个元素`,
+          );
+        }
         for (const el of elements) {
           if (seen.has(el)) continue;
           if (this.isWhitelisted(el)) continue;
@@ -491,8 +496,13 @@ const RulesEngine = {
 
     const origin = this._siteOrigin || window.location.origin.toLowerCase();
 
-    // 站内中转跳转（/jump?url=外部地址）→ 视为外部广告
-    if (this._isRedirectToExternal(href)) return true;
+    // 站内中转跳转
+    const isRedirect = this._isRedirectToExternal(href);
+    console.log(
+      `[诊断] isExternalLink: href="${href}" redirect=${isRedirect} origin=${origin}`,
+    );
+
+    if (isRedirect) return true;
 
     // 站内跳转放行
     if (href.startsWith('/')) return false;
