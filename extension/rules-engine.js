@@ -230,6 +230,8 @@ const RulesEngine = {
     const style = window.getComputedStyle(el);
     if (style.display === 'none' || style.visibility === 'hidden') return false;
     if (style.opacity === '0') return false;
+    // IMG/PICTURE 可能未加载完成所以 rect 为 0×0，跳过尺寸检查
+    if (el.tagName === 'IMG' || el.tagName === 'PICTURE') return true;
     const rect = el.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) return false;
     return true;
