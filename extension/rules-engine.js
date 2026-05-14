@@ -200,10 +200,69 @@ const RulesEngine = {
       }
     }
 
+    // ===== 额外扫描：绝对定位图片 + 外部链接 = 浮层广告 =====
+    this._scanAbsoluteAds(results, seen);
+
     // 按优先级排序
     results.sort((a, b) => b.priority - a.priority);
     console.log(`[广告拦截助手] 检测到 ${results.length} 个疑似广告元素`);
     return results;
+  },
+
+  /**
+   * 扫描绝对定位（position:absolute/fixed）图片元素
+   * 这类元素浮于内容之上，含外部链接时几乎必为广告
+   */
+  _scanAbsoluteAds(results, seen) {
+    const imgs = document.querySelectorAll('img');
+    for (const img of imgs) {
+      if (seen.has(img)) continue;
+      if (this.isWhitelisted(img)) continue;
+
+      const style = window.getComputedStyle(img);
+      if (style.position !== 'absolute' && style.position !== 'fixed') continue;
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
+
+      // 检查图片自身或其父级是否有外部/中转链接
+      const link = img.closest('a[href]');
+      if (link) {
+        const href = (link.getAttribute('href') || '').trim();
+        if (
+          this._isRedirectToExternal(href) ||
+          this.isExternalLink_strict(href)
+        ) {
+          seen.add(img);
+          results.push({
+            element: img,
+            selector: this.extractSelector(img),
+            priority: 70,
+            ruleType: 'absolute-ad',
+          });
+        }
+      }
+    }
+  },
+
+  /**
+   * 严格判断 href 是否站外（不检查 closest，直接判断 URL）
+   */
+  isExternalLink_strict(href) {
+    if (!href) return false;
+    const origin = this._siteOrigin || window.location.origin.toLowerCase();
+    if (
+      href.startsWith('/') ||
+      href.startsWith('#') ||
+      href.startsWith('?') ||
+      href.startsWith('javascript:')
+    )
+      return false;
+    if (href.toLowerCase().startsWith(origin)) return false;
+    try {
+      const url = new URL(href, window.location.origin);
+      return url.origin.toLowerCase() !== origin;
+    } catch (e) {
+      return false;
+    }
   },
 
   /**
