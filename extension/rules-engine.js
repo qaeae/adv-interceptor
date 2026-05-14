@@ -16,23 +16,20 @@ const RulesEngine = {
     { selector: '[data-google-query-id]', type: 'data', priority: 100 },
     { selector: '[data-ad-slot]', type: 'data', priority: 100 },
     { selector: '[data-native_ad]', type: 'data', priority: 100 },
-    // ===== 高置信度：class/id 含广告关键词 =====
-    { selector: '[class*="ad-"]', type: 'class', priority: 90 },
-    { selector: '[class*="-ad-"]', type: 'class', priority: 90 },
-    { selector: '[class*="_ad"]', type: 'class', priority: 90 },
-    { selector: '[class*="_ad_"]', type: 'class', priority: 90 },
-    { selector: '[class~="ad"]', type: 'class', priority: 85 },
-    { selector: '[class~="ads"]', type: 'class', priority: 85 },
-    { selector: '[class*="advert"]', type: 'class', priority: 90 },
-    { selector: '[class*="sponsored"]', type: 'class', priority: 90 },
-    { selector: '[class*="promoted"]', type: 'class', priority: 85 },
-    { selector: '[id*="ad-"]', type: 'id', priority: 85 },
-    { selector: '[id*="_ad"]', type: 'id', priority: 85 },
-    { selector: '[id*="-ad-"]', type: 'id', priority: 85 },
-    // ===== 中文广告 =====
-    { selector: '[class*="guanggao"]', type: 'class', priority: 85 },
-    { selector: '[class~="gg"]', type: 'class', priority: 60 },
-    { selector: '[class*="advertising"]', type: 'class', priority: 85 },
+    // ===== class 广告关键词 → 需外链验证 =====
+    { selector: '[class*="ad-"]', type: 'class-ext', priority: 85 },
+    { selector: '[class*="-ad-"]', type: 'class-ext', priority: 85 },
+    { selector: '[class*="_ad"]', type: 'class-ext', priority: 85 },
+    { selector: '[class*="_ad_"]', type: 'class-ext', priority: 85 },
+    { selector: '[class~="ad"]', type: 'class-ext', priority: 80 },
+    { selector: '[class~="ads"]', type: 'class-ext', priority: 80 },
+    { selector: '[class*="advert"]', type: 'class-ext', priority: 85 },
+    { selector: '[class*="sponsored"]', type: 'class-ext', priority: 85 },
+    { selector: '[class*="promoted"]', type: 'class-ext', priority: 80 },
+    // ===== 中文广告 class → 需外链验证 =====
+    { selector: '[class*="guanggao"]', type: 'class-ext', priority: 80 },
+    { selector: '[class~="gg"]', type: 'class-ext', priority: 55 },
+    { selector: '[class*="advertising"]', type: 'class-ext', priority: 80 },
     { selector: '[aria-label*="广告"]', type: 'aria', priority: 90 },
     { selector: '[aria-label*="赞助"]', type: 'aria', priority: 90 },
     { selector: '[aria-label*="推广"]', type: 'aria', priority: 90 },
@@ -73,14 +70,14 @@ const RulesEngine = {
     { selector: '[id*="taboola"]', type: 'id', priority: 85 },
     { selector: '[class*="outbrain"]', type: 'class', priority: 85 },
     { selector: '[class*="mgid"]', type: 'class', priority: 80 },
-    // ===== 中置信度 =====
-    { selector: '[class*="banner-ad"]', type: 'class', priority: 80 },
-    { selector: '[class*="-banner"]', type: 'class', priority: 45 },
-    { selector: '[class*="promo"]', type: 'class', priority: 65 },
-    { selector: '[class*="commercial"]', type: 'class', priority: 70 },
-    { selector: '[class*="marketing"]', type: 'class', priority: 65 },
-    { selector: '[id*="banner"]', type: 'id', priority: 55 },
-    { selector: '[id*="promo"]', type: 'id', priority: 60 },
+    // ===== 中置信度（class 关键词 + 外链验证） =====
+    { selector: '[class*="banner-ad"]', type: 'class-ext', priority: 75 },
+    { selector: '[class*="-banner"]', type: 'class-ext', priority: 45 },
+    { selector: '[class*="promo"]', type: 'class-ext', priority: 60 },
+    { selector: '[class*="commercial"]', type: 'class-ext', priority: 65 },
+    { selector: '[class*="marketing"]', type: 'class-ext', priority: 60 },
+    { selector: '[id*="banner"]', type: 'class-ext', priority: 50 },
+    { selector: '[id*="promo"]', type: 'class-ext', priority: 55 },
     // ===== 含 adv/ad 关键词 + 内部有外部链接 = 广告容器 =====
     { selector: '[class*="adv"]', type: 'ad-class-link', priority: 70 },
     { selector: '[class*="-adv-"]', type: 'ad-class-link', priority: 75 },
@@ -179,13 +176,9 @@ const RulesEngine = {
           // 对于 data-link 规则，验证 data 属性值是否指向外部
           if (rule.type === 'data-link' && !this.hasExternalDataLink(el))
             continue;
-          // 对于 class/id 类规则，验证是否在广告容器中
-          if (
-            (rule.type === 'class' || rule.type === 'id') &&
-            rule.priority < 80
-          ) {
-            if (!this.isInAdContext(el)) continue;
-          }
+          // 对于 class-ext 规则：class 含广告关键词 → 验证外链/中转跳转
+          if (rule.type === 'class-ext' && !this._hasAnyExternalLink(el))
+            continue;
 
           seen.add(el);
           results.push({
@@ -656,6 +649,18 @@ const RulesEngine = {
       }
     }
     return false;
+  },
+
+  /**
+   * class-ext 验证：元素自身或其内部是否有外部/中转链接
+   */
+  _hasAnyExternalLink(el) {
+    // 元素自身是 <a> → 用 isAdLink
+    if (el.tagName === 'A') return this.isAdLink(el);
+    // 元素在 <a> 内 → 用 isExternalLink
+    if (el.closest('a[href]')) return this.isExternalLink(el);
+    // 容器内搜索外部链接
+    return this.containsExternalLink(el);
   },
 
   /**

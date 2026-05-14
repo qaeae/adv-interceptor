@@ -97,6 +97,7 @@
         cls.includes('ad-') ||
         cls.includes('_ad') ||
         cls.includes('advert') ||
+        cls.includes('adv') ||
         cls.includes('sponsor') ||
         cls.includes('promo') ||
         cls.includes('banner') ||
@@ -104,6 +105,7 @@
         cls.includes('advertising') ||
         id.includes('ad-') ||
         id.includes('_ad') ||
+        id.includes('adv') ||
         id.includes('google_ads') ||
         id.includes('taboola');
 
@@ -532,6 +534,7 @@
         containerCls.includes('ad-') ||
         containerCls.includes('_ad') ||
         containerCls.includes('advert') ||
+        containerCls.includes('adv') ||
         containerCls.includes('sponsor') ||
         containerCls.includes('promo') ||
         containerCls.includes('banner') ||
@@ -539,6 +542,7 @@
         containerCls.includes('advertising') ||
         containerId.includes('ad-') ||
         containerId.includes('_ad') ||
+        containerId.includes('adv') ||
         containerId.includes('google_ads') ||
         containerId.includes('taboola');
 
