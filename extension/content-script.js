@@ -157,7 +157,9 @@
       if (child.nodeType === Node.COMMENT_NODE) continue;
       if (child.nodeType === Node.ELEMENT_NODE) {
         const tag = child.tagName;
-        if (tag === 'BR' || tag === 'HR') continue;
+        // 不可见元素 + 广告脚本 → 跳过
+        if (tag === 'BR' || tag === 'HR' || tag === 'SCRIPT' || tag === 'STYLE')
+          continue;
         // 递归：空容器也视为空
         if (['DIV', 'SPAN', 'P', 'LI'].includes(tag) && isEmptyShell(child))
           continue;
@@ -528,11 +530,15 @@
       // 元素节点
       if (child.nodeType === Node.ELEMENT_NODE) {
         const childTag = child.tagName;
-        // 空 <br> 忽略
-        if (childTag === 'BR') continue;
+        // 不可见/无布局影响元素 → 忽略
+        if (childTag === 'BR' || childTag === 'SCRIPT' || childTag === 'STYLE')
+          continue;
         // 如果还有其他有意义的元素子节点 → 容器有实际内容
         return false;
       }
+
+      // 注释节点 → 忽略
+      if (child.nodeType === Node.COMMENT_NODE) continue;
     }
 
     // 排除广告后，容器只剩空白 → 是纯容器
@@ -812,6 +818,16 @@
 
         const href = (link.getAttribute('href') || '').trim();
         if (!href) return;
+
+        // 站内中转跳转（/jump?url=外部地址）→ 拦截
+        if (RulesEngine._isRedirectToExternal(href)) {
+          e.preventDefault();
+          e.stopPropagation();
+          console.log(
+            `[广告拦截助手] 已拦截中转跳转: ${href.substring(0, 100)}`,
+          );
+          return;
+        }
 
         // 站内跳转放行
         if (href.startsWith('/')) return;

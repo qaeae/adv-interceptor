@@ -91,6 +91,11 @@ const RulesEngine = {
     { selector: '[class*="modal-ad"]', type: 'class', priority: 80 },
     { selector: '[class*="overlay-ad"]', type: 'class', priority: 80 },
     { selector: '[class*="floating-ad"]', type: 'class', priority: 80 },
+    // ===== 广告脚本（JuicyAds / 内联广告脚本等） =====
+    { selector: 'script[data-cfasync]', type: 'data', priority: 90 },
+    { selector: 'script[src*="juicyads"]', type: 'data', priority: 95 },
+    { selector: 'script[src*="ad."]', type: 'data', priority: 85 },
+    { selector: 'script[src*="/ad/"]', type: 'data', priority: 80 },
     // ===== 可点击元素 → 站外跳转 = 广告（仅检测 <a> 内的 img/文字） =====
     { selector: 'a[href] img', type: 'clickable-external', priority: 75 },
     { selector: 'a[href] span', type: 'clickable-external', priority: 60 },
@@ -218,6 +223,9 @@ const RulesEngine = {
     if (el.tagName !== 'A') return false;
     const href = (el.href || '').toLowerCase();
     const hostname = window.location.hostname;
+
+    // 站内中转跳转（/jump?url=外部地址）→ 视为广告链接
+    if (this._isRedirectToExternal(href)) return true;
 
     // 检查是否指向已知广告域
     const adDomains = [
@@ -380,8 +388,78 @@ const RulesEngine = {
   },
 
   /**
+   * 判断 href 是否为站内中转跳转（如 /jump?url=外部地址）
+   * 这类链接先到本站中转，再重定向到外部广告页
+   */
+  _REDIRECT_PATTERNS: [
+    '/jump',
+    '/redirect',
+    '/go',
+    '/out',
+    '/link',
+    '/click',
+    '/track',
+    '/visit',
+    '/goto',
+    '/leave',
+    '/away',
+    '/exit',
+    '/bounce',
+    '/refer',
+    '/forward',
+  ],
+
+  /**
+   * 检查 URL 是否是通过站内中转跳往站外的广告链接
+   */
+  _isRedirectToExternal(href) {
+    const lower = href.toLowerCase();
+    const origin = this._siteOrigin || window.location.origin.toLowerCase();
+
+    // 检查路径中是否包含中转关键词
+    const hasRedirectPath = this._REDIRECT_PATTERNS.some((p) =>
+      lower.includes(p),
+    );
+    if (!hasRedirectPath) return false;
+
+    // 尝试从 URL 参数或路径中提取目标地址
+    try {
+      const url = new URL(href, window.location.origin);
+      // 搜索所有参数值，查找外部 URL
+      for (const [_, value] of url.searchParams) {
+        if (value.startsWith('http://') || value.startsWith('https://')) {
+          try {
+            const target = new URL(value);
+            if (target.origin.toLowerCase() !== origin) return true;
+          } catch (e) {
+            /* ignore */
+          }
+        }
+      }
+      // 也检查路径中是否嵌入了完整 URL（如 /go/https://external.com）
+      const path = url.pathname.toLowerCase();
+      const httpIdx = path.indexOf('http://');
+      const httpsIdx = path.indexOf('https://');
+      const idx = httpIdx >= 0 ? httpIdx : httpsIdx;
+      if (idx >= 0) {
+        try {
+          const embedded = new URL(path.substring(idx));
+          if (embedded.origin.toLowerCase() !== origin) return true;
+        } catch (e) {
+          /* ignore */
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+
+    // 有中转路径但无法提取目标 → 保守处理：视为可疑
+    return true;
+  },
+
+  /**
    * 判断可点击元素（<a> 内的 img/span/div）是否跳往站外
-   * 双重验证：父级 <a> 的 href + 图片自身的 src（广告图片常托管在外部 CDN）
+   * 包含站内中转跳转检测（如 /jump?url=外部地址）
    */
   isExternalLink(el) {
     const link = el.closest('a[href]');
@@ -391,6 +469,9 @@ const RulesEngine = {
     if (!href) return false;
 
     const origin = this._siteOrigin || window.location.origin.toLowerCase();
+
+    // 站内中转跳转（/jump?url=外部地址）→ 视为外部广告
+    if (this._isRedirectToExternal(href)) return true;
 
     // 站内跳转放行
     if (href.startsWith('/')) return false;
@@ -423,6 +504,8 @@ const RulesEngine = {
     for (const link of links) {
       const href = (link.getAttribute('href') || '').trim();
       if (!href) continue;
+      // 站内中转跳转 → 视为外部链接
+      if (this._isRedirectToExternal(href)) return true;
       // 站内跳转 → 跳过
       if (href.startsWith('/')) continue;
       if (href.startsWith('#')) continue;
